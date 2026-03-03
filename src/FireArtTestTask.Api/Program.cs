@@ -1,62 +1,13 @@
-using System.Text;
-using FireArtTestTask.Api.Configuration;
-using FireArtTestTask.Api.Data;
 using FireArtTestTask.Api.Middleware;
-using FireArtTestTask.Api.Services;
-using FluentValidation;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using FireArtTestTask.Application;
+using FireArtTestTask.Infrastructure;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrEmpty(connectionString))
-{
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseInMemoryDatabase("FireArtDev"));
-}
-else
-{
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(connectionString));
-}
-
-// JWT Settings
-var jwtSection = builder.Configuration.GetSection("Jwt");
-builder.Services.Configure<JwtSettings>(jwtSection);
-var jwtSettings = jwtSection.Get<JwtSettings>()!;
-
-// Authentication
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
-    };
-});
-
-// Services
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-
-// FluentValidation
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+// Application + Infrastructure
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Controllers
 builder.Services.AddControllers();

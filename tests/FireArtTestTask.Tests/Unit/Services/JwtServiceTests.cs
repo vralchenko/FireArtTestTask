@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
-using FireArtTestTask.Api.Configuration;
-using FireArtTestTask.Api.Entities;
-using FireArtTestTask.Api.Services;
+using FireArtTestTask.Domain.Entities;
+using FireArtTestTask.Infrastructure.Authentication;
+using FireArtTestTask.Infrastructure.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 

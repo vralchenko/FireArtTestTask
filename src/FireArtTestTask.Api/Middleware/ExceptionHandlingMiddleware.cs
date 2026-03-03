@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using FireArtTestTask.Api.Exceptions;
+using FireArtTestTask.Application.Exceptions;
 
 namespace FireArtTestTask.Api.Middleware;
 

@@ -1,4 +1,4 @@
-using FireArtTestTask.Api.Data;
+using FireArtTestTask.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;

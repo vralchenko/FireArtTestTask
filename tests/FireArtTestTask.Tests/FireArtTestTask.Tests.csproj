@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FireArtTestTask.Api\FireArtTestTask.Api.csproj" />
+    <ProjectReference Include="..\..\src\FireArtTestTask.Application\FireArtTestTask.Application.csproj" />
+    <ProjectReference Include="..\..\src\FireArtTestTask.Infrastructure\FireArtTestTask.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

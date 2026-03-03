@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FireArtTestTask.Api.DTOs.Auth;
-using FireArtTestTask.Api.DTOs.Products;
+using FireArtTestTask.Application.Auth.Commands;
+using FireArtTestTask.Application.DTOs;
+using FireArtTestTask.Application.Products.Commands;
+using FireArtTestTask.Application.Products.Queries;
 using FluentAssertions;
 
 namespace FireArtTestTask.Tests.Integration;
@@ -18,7 +20,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
     private async Task AuthenticateAsync()
     {
-        var signup = new SignupRequest($"product-test-{Guid.NewGuid()}@example.com", "password123");
+        var signup = new SignupCommand($"product-test-{Guid.NewGuid()}@example.com", "password123");
         var response = await _client.PostAsJsonAsync("/api/auth/signup", signup);
         var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
         _client.DefaultRequestHeaders.Authorization =
@@ -29,7 +31,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CreateProduct_Authenticated_ReturnsCreated()
     {
         await AuthenticateAsync();
-        var request = new CreateProductRequest("Test Product", "A test product", 29.99m, "Electronics");
+        var request = new CreateProductCommand("Test Product", "A test product", 29.99m, "Electronics");
 
         var response = await _client.PostAsJsonAsync("/api/products", request);
 
@@ -43,7 +45,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CreateProduct_Unauthenticated_ReturnsUnauthorized()
     {
         _client.DefaultRequestHeaders.Authorization = null;
-        var request = new CreateProductRequest("Test", "Desc", 10m, "Cat");
+        var request = new CreateProductCommand("Test", "Desc", 10m, "Cat");
 
         var response = await _client.PostAsJsonAsync("/api/products", request);
 
@@ -54,7 +56,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CreateProduct_InvalidData_ReturnsBadRequest()
     {
         await AuthenticateAsync();
-        var request = new CreateProductRequest("", "Desc", -5m, "");
+        var request = new CreateProductCommand("", "Desc", -5m, "");
 
         var response = await _client.PostAsJsonAsync("/api/products", request);
 
@@ -65,7 +67,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_ExistingProduct_ReturnsOk()
     {
         await AuthenticateAsync();
-        var create = new CreateProductRequest("Get Test", "Desc", 15m, "Books");
+        var create = new CreateProductCommand("Get Test", "Desc", 15m, "Books");
         var createResponse = await _client.PostAsJsonAsync("/api/products", create);
         var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
 
@@ -91,9 +93,9 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     {
         await AuthenticateAsync();
         await _client.PostAsJsonAsync("/api/products",
-            new CreateProductRequest("Search Item 1", "Desc", 10m, "Toys"));
+            new CreateProductCommand("Search Item 1", "Desc", 10m, "Toys"));
         await _client.PostAsJsonAsync("/api/products",
-            new CreateProductRequest("Search Item 2", "Desc", 20m, "Toys"));
+            new CreateProductCommand("Search Item 2", "Desc", 20m, "Toys"));
 
         var response = await _client.GetAsync("/api/products?search=Search+Item&category=Toys");
 
@@ -106,11 +108,11 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Update_ExistingProduct_ReturnsOk()
     {
         await AuthenticateAsync();
-        var create = new CreateProductRequest("Old Name", "Old Desc", 10m, "Cat");
+        var create = new CreateProductCommand("Old Name", "Old Desc", 10m, "Cat");
         var createResponse = await _client.PostAsJsonAsync("/api/products", create);
         var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
 
-        var update = new UpdateProductRequest("New Name", "New Desc", 20m, "NewCat");
+        var update = new { Name = "New Name", Description = "New Desc", Price = 20m, Category = "NewCat" };
         var response = await _client.PutAsJsonAsync($"/api/products/{created!.Id}", update);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -123,7 +125,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Update_NonExistent_ReturnsNotFound()
     {
         await AuthenticateAsync();
-        var update = new UpdateProductRequest("Name", "Desc", 10m, "Cat");
+        var update = new { Name = "Name", Description = "Desc", Price = 10m, Category = "Cat" };
 
         var response = await _client.PutAsJsonAsync($"/api/products/{Guid.NewGuid()}", update);
 
@@ -134,7 +136,7 @@ public class ProductEndpointTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Delete_ExistingProduct_ReturnsNoContent()
     {
         await AuthenticateAsync();
-        var create = new CreateProductRequest("Delete Me", "Desc", 10m, "Cat");
+        var create = new CreateProductCommand("Delete Me", "Desc", 10m, "Cat");
         var createResponse = await _client.PostAsJsonAsync("/api/products", create);
         var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
 

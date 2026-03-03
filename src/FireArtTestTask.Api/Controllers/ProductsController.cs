@@ -1,6 +1,6 @@
-using FireArtTestTask.Api.DTOs.Products;
-using FireArtTestTask.Api.Services;
-using FluentValidation;
+using FireArtTestTask.Application.Products.Commands;
+using FireArtTestTask.Application.Products.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,54 +11,39 @@ namespace FireArtTestTask.Api.Controllers;
 [Authorize]
 public class ProductsController : ControllerBase
 {
-    private readonly IProductService _productService;
-    private readonly IValidator<CreateProductRequest> _createValidator;
-    private readonly IValidator<UpdateProductRequest> _updateValidator;
+    private readonly IMediator _mediator;
 
-    public ProductsController(
-        IProductService productService,
-        IValidator<CreateProductRequest> createValidator,
-        IValidator<UpdateProductRequest> updateValidator)
+    public ProductsController(IMediator mediator)
     {
-        _productService = productService;
-        _createValidator = createValidator;
-        _updateValidator = updateValidator;
+        _mediator = mediator;
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateProductRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
     {
-        await _createValidator.ValidateAndThrowAsync(request);
-        var result = await _productService.CreateAsync(request);
+        var result = await _mediator.Send(command);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
-    {
-        var result = await _productService.GetByIdAsync(id);
-        return Ok(result);
-    }
+        => Ok(await _mediator.Send(new GetProductByIdQuery(id)));
 
     [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] ProductSearchRequest request)
-    {
-        var result = await _productService.SearchAsync(request);
-        return Ok(result);
-    }
+    public async Task<IActionResult> Search([FromQuery] SearchProductsQuery query)
+        => Ok(await _mediator.Send(query));
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProductRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProductCommand command)
     {
-        await _updateValidator.ValidateAndThrowAsync(request);
-        var result = await _productService.UpdateAsync(id, request);
-        return Ok(result);
+        var cmd = command with { Id = id };
+        return Ok(await _mediator.Send(cmd));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _productService.DeleteAsync(id);
+        await _mediator.Send(new DeleteProductCommand(id));
         return NoContent();
     }
 }

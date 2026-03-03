@@ -1,13 +1,15 @@
 # FireArt Test Task API
 
-.NET 8 Web API with JWT authentication, Product CRUD, and search functionality.
+.NET 8 Web API with Clean Architecture, MediatR (CQRS), JWT authentication, Product CRUD, and search functionality.
 
 ## Tech Stack
 
+- **Architecture**: Clean Architecture (Domain, Application, Infrastructure, Api)
+- **CQRS**: MediatR — commands, queries, handlers
 - **Runtime**: .NET 8
 - **Database**: PostgreSQL + Entity Framework Core (Npgsql)
 - **Auth**: JWT Bearer + BCrypt password hashing
-- **Validation**: FluentValidation
+- **Validation**: FluentValidation + MediatR Pipeline Behavior
 - **Tests**: xUnit, Moq, FluentAssertions, WebApplicationFactory + EF InMemory
 - **Docs**: Swagger / Swashbuckle
 
@@ -93,33 +95,54 @@ All tests run against an InMemory database — no PostgreSQL required.
 
 ```
 FireArtTestTask/
-├── src/FireArtTestTask.Api/
-│   ├── Controllers/        # AuthController, ProductsController
-│   ├── Data/               # AppDbContext
-│   ├── Entities/            # User, Product
-│   ├── DTOs/               # Request/Response models
-│   ├── Services/            # Business logic (Auth, Product, JWT, Email)
-│   ├── Validators/          # FluentValidation validators
-│   ├── Middleware/          # Global exception handling
-│   ├── Exceptions/          # Custom exception types
-│   └── Configuration/      # JwtSettings
+├── src/
+│   ├── FireArtTestTask.Domain/           # Entities (User, Product) — zero dependencies
+│   ├── FireArtTestTask.Application/      # CQRS layer
+│   │   ├── Abstractions/                 #   IAppDbContext, IJwtService, IEmailService
+│   │   ├── Auth/Commands/                #   Signup, Login, ForgotPassword, ResetPassword
+│   │   ├── Products/Commands/            #   Create, Update, Delete
+│   │   ├── Products/Queries/             #   GetById, Search
+│   │   ├── DTOs/                         #   AuthResponse, ProductResponse, PagedResponse
+│   │   ├── Validators/                   #   FluentValidation for all commands
+│   │   ├── Behaviors/                    #   ValidationBehavior (MediatR pipeline)
+│   │   └── Exceptions/                   #   NotFoundException, ConflictException, UnauthorizedException
+│   ├── FireArtTestTask.Infrastructure/   # Implementations
+│   │   ├── Persistence/                  #   AppDbContext (EF Core)
+│   │   ├── Authentication/               #   JwtService
+│   │   ├── Email/                        #   EmailService (stub)
+│   │   └── Configuration/               #   JwtSettings
+│   └── FireArtTestTask.Api/             # Thin API layer
+│       ├── Controllers/                  #   AuthController, ProductsController (MediatR only)
+│       ├── Middleware/                   #   ExceptionHandlingMiddleware
+│       └── Program.cs
 └── tests/FireArtTestTask.Tests/
-    ├── Unit/               # Service and validator tests
-    └── Integration/        # Endpoint tests with WebApplicationFactory
+    ├── Unit/                             # Handler and validator tests
+    └── Integration/                      # Endpoint tests with WebApplicationFactory
+```
+
+### Project Dependencies
+
+```
+Domain        → (nothing)
+Application   → Domain
+Infrastructure→ Application
+Api           → Application, Infrastructure
+Tests         → Api, Application, Infrastructure
 ```
 
 ## Postman Collection
 
 Import `FireArtTestTask.postman_collection.json` into Postman. Run requests in order (Auth first, then Products). The collection auto-saves the JWT token and product ID to variables.
 
-## Assumptions & Design Decisions
+## Architecture & Design Decisions
 
+- **Clean Architecture**: The solution is split into 4 projects with strict dependency rules. Domain has zero dependencies, Application defines abstractions, Infrastructure implements them, and Api is the composition root.
+- **CQRS with MediatR**: All business logic lives in command/query handlers. Controllers are thin — they only call `_mediator.Send()`. This provides clear separation of concerns and makes each operation independently testable.
+- **Validation Pipeline**: Instead of manual `ValidateAndThrowAsync()` in controllers, a `ValidationBehavior<TRequest, TResponse>` in the MediatR pipeline automatically validates every request before it reaches the handler.
 - **Entity choice**: `Product` with fields Name, Description, Price, Category — a practical and universally understandable domain entity.
 - **Auth**: Custom JWT-based authentication (no ASP.NET Identity) — signup, login, forgot-password, and reset-password. Passwords are hashed with BCrypt.
 - **Password reset flow**: A reset token is generated and logged to console (email sending is stubbed via `IEmailService`). In production this would be replaced with a real email provider (SendGrid, SMTP, etc.).
 - **Search**: The `GET /api/products` endpoint supports full-text search (by name/description), category filtering, price range filtering, sorting, and pagination.
-- **Validation**: FluentValidation is used for all request validation, invoked manually in controllers for explicit control.
 - **Error handling**: A global `ExceptionHandlingMiddleware` maps custom exceptions (`NotFoundException`, `ConflictException`, `UnauthorizedException`) to proper HTTP status codes.
 - **Security**: The forgot-password endpoint always returns 200 regardless of whether the email exists, to prevent user enumeration.
 - **Tests**: 64 tests (unit + integration) run against InMemory EF Core — no external dependencies needed.
-- **No ASP.NET Identity**: Auth is built from scratch to demonstrate understanding of JWT, password hashing, and token-based flows.
