@@ -26,6 +26,8 @@ public class AuthHandlerTests
         _jwtServiceMock.Setup(x => x.GenerateToken(It.IsAny<User>())).Returns("test-token");
     }
 
+    // ── Signup ──────────────────────────────────────────────────────
+
     [Fact]
     public async Task Signup_NewUser_ReturnsAuthResponse()
     {
@@ -63,6 +65,20 @@ public class AuthHandlerTests
     }
 
     [Fact]
+    public async Task Signup_SetsCreatedAt()
+    {
+        var beforeSignup = DateTime.UtcNow;
+        var handler = new SignupCommandHandler(_db, _jwtServiceMock.Object);
+        await handler.Handle(new SignupCommand("created@example.com", "password123"), CancellationToken.None);
+
+        var user = await _db.Users.FirstAsync(u => u.Email == "created@example.com");
+        user.CreatedAt.Should().BeOnOrAfter(beforeSignup);
+        user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    // ── Login ───────────────────────────────────────────────────────
+
+    [Fact]
     public async Task Login_ValidCredentials_ReturnsToken()
     {
         var signupHandler = new SignupCommandHandler(_db, _jwtServiceMock.Object);
@@ -72,6 +88,18 @@ public class AuthHandlerTests
         var result = await loginHandler.Handle(new LoginCommand("login@example.com", "password123"), CancellationToken.None);
 
         result.Token.Should().Be("test-token");
+    }
+
+    [Fact]
+    public async Task Login_ValidCredentials_ReturnsCorrectEmail()
+    {
+        var signupHandler = new SignupCommandHandler(_db, _jwtServiceMock.Object);
+        await signupHandler.Handle(new SignupCommand("emailcheck@example.com", "password123"), CancellationToken.None);
+
+        var loginHandler = new LoginCommandHandler(_db, _jwtServiceMock.Object);
+        var result = await loginHandler.Handle(new LoginCommand("emailcheck@example.com", "password123"), CancellationToken.None);
+
+        result.Email.Should().Be("emailcheck@example.com");
     }
 
     [Fact]
@@ -95,6 +123,8 @@ public class AuthHandlerTests
         await act.Should().ThrowAsync<UnauthorizedException>();
     }
 
+    // ── ForgotPassword ──────────────────────────────────────────────
+
     [Fact]
     public async Task ForgotPassword_ExistingUser_SetsResetToken()
     {
@@ -117,6 +147,33 @@ public class AuthHandlerTests
 
         await act.Should().NotThrowAsync();
     }
+
+    [Fact]
+    public async Task ForgotPassword_ExistingUser_SendsEmail()
+    {
+        var signupHandler = new SignupCommandHandler(_db, _jwtServiceMock.Object);
+        await signupHandler.Handle(new SignupCommand("sendemail@example.com", "password123"), CancellationToken.None);
+
+        var forgotHandler = new ForgotPasswordCommandHandler(_db, _emailServiceMock.Object);
+        await forgotHandler.Handle(new ForgotPasswordCommand("sendemail@example.com"), CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            x => x.SendPasswordResetEmailAsync("sendemail@example.com", It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_NonExistentUser_DoesNotSendEmail()
+    {
+        var forgotHandler = new ForgotPasswordCommandHandler(_db, _emailServiceMock.Object);
+        await forgotHandler.Handle(new ForgotPasswordCommand("noone@example.com"), CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            x => x.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    // ── ResetPassword ───────────────────────────────────────────────
 
     [Fact]
     public async Task ResetPassword_ValidToken_ChangesPassword()
@@ -149,6 +206,56 @@ public class AuthHandlerTests
         var resetHandler = new ResetPasswordCommandHandler(_db);
         var act = () => resetHandler.Handle(
             new ResetPasswordCommand("reset2@example.com", "wrong-token", "new-password"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
+    }
+
+    [Fact]
+    public async Task ResetPassword_ValidToken_ClearsResetTokenExpiry()
+    {
+        var signupHandler = new SignupCommandHandler(_db, _jwtServiceMock.Object);
+        await signupHandler.Handle(new SignupCommand("clearexpiry@example.com", "old-password"), CancellationToken.None);
+
+        var forgotHandler = new ForgotPasswordCommandHandler(_db, _emailServiceMock.Object);
+        await forgotHandler.Handle(new ForgotPasswordCommand("clearexpiry@example.com"), CancellationToken.None);
+        var user = await _db.Users.FirstAsync(u => u.Email == "clearexpiry@example.com");
+        user.ResetTokenExpiry.Should().NotBeNull();
+        var token = user.ResetToken!;
+
+        var resetHandler = new ResetPasswordCommandHandler(_db);
+        await resetHandler.Handle(new ResetPasswordCommand("clearexpiry@example.com", token, "new-password"), CancellationToken.None);
+
+        var updatedUser = await _db.Users.FirstAsync(u => u.Email == "clearexpiry@example.com");
+        updatedUser.ResetToken.Should().BeNull();
+        updatedUser.ResetTokenExpiry.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResetPassword_ExpiredToken_ThrowsUnauthorized()
+    {
+        _db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "expired@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
+            ResetToken = "expired-token",
+            ResetTokenExpiry = DateTime.UtcNow.AddHours(-1) // expired
+        });
+        await _db.SaveChangesAsync();
+
+        var resetHandler = new ResetPasswordCommandHandler(_db);
+        var act = () => resetHandler.Handle(
+            new ResetPasswordCommand("expired@example.com", "expired-token", "new-password"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
+    }
+
+    [Fact]
+    public async Task ResetPassword_NonExistentUser_ThrowsUnauthorized()
+    {
+        var resetHandler = new ResetPasswordCommandHandler(_db);
+        var act = () => resetHandler.Handle(
+            new ResetPasswordCommand("nobody@example.com", "token", "new-password"), CancellationToken.None);
 
         await act.Should().ThrowAsync<UnauthorizedException>();
     }

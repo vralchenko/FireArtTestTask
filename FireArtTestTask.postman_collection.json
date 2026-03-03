@@ -4,10 +4,20 @@
     "_postman_id": "fireart-test-task",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000"
+      "value": "http://localhost:5035"
     },
     {
       "key": "token",
@@ -25,6 +35,9 @@
   "item": [
     {
       "name": "Auth",
+      "auth": {
+        "type": "noauth"
+      },
       "item": [
         {
           "name": "Signup - Success",
@@ -254,10 +267,7 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token}}"}
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\"name\": \"Test Widget\", \"description\": \"A test product\", \"price\": 29.99, \"category\": \"Electronics\"}"
@@ -278,10 +288,7 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token}}"}
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\"name\": \"\", \"description\": \"\", \"price\": -5, \"category\": \"\"}"
@@ -301,6 +308,9 @@
             }
           ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
@@ -323,10 +333,7 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token}}"}
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\"name\": \"Another Widget\", \"description\": \"Second product\", \"price\": 49.99, \"category\": \"Electronics\"}"
@@ -353,7 +360,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {"raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}"]}
           }
         },
@@ -370,7 +377,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {"raw": "{{baseUrl}}/api/products/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api","products","00000000-0000-0000-0000-000000000000"]}
           }
         },
@@ -394,7 +401,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {"raw": "{{baseUrl}}/api/products", "host": ["{{baseUrl}}"], "path": ["api","products"]}
           }
         },
@@ -417,7 +424,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/products?category=Electronics",
               "host": ["{{baseUrl}}"],
@@ -432,16 +439,14 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
-                ],
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/products?search=Widget",
               "host": ["{{baseUrl}}"],
@@ -456,16 +461,14 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
-                ],
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/products?minPrice=10&maxPrice=50",
               "host": ["{{baseUrl}}"],
@@ -497,7 +500,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/products?page=1&pageSize=5",
               "host": ["{{baseUrl}}"],
@@ -528,10 +531,7 @@
           ],
           "request": {
             "method": "PUT",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token}}"}
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\"name\": \"Updated Widget\", \"description\": \"Updated description\", \"price\": 39.99, \"category\": \"Electronics\"}"
@@ -552,10 +552,7 @@
           ],
           "request": {
             "method": "PUT",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token}}"}
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
               "raw": "{\"name\": \"X\", \"description\": \"X\", \"price\": 1, \"category\": \"X\"}"
@@ -576,7 +573,7 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {"raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}"]}
           }
         },
@@ -593,7 +590,7 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "header": [],
             "url": {"raw": "{{baseUrl}}/api/products/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api","products","00000000-0000-0000-0000-000000000000"]}
           }
         }

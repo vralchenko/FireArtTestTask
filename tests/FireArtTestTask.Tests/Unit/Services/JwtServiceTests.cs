@@ -60,4 +60,40 @@ public class JwtServiceTests
         var jwt = handler.ReadJwtToken(token);
         jwt.ValidTo.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(60), TimeSpan.FromMinutes(1));
     }
+
+    [Fact]
+    public void GenerateToken_HasCorrectIssuer()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
+
+        var token = _sut.GenerateToken(user);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(token);
+        jwt.Issuer.Should().Be("TestIssuer");
+    }
+
+    [Fact]
+    public void GenerateToken_HasCorrectAudience()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
+
+        var token = _sut.GenerateToken(user);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(token);
+        jwt.Audiences.Should().Contain("TestAudience");
+    }
+
+    [Fact]
+    public void GenerateToken_DifferentUsers_GetDifferentTokens()
+    {
+        var user1 = new User { Id = Guid.NewGuid(), Email = "user1@example.com" };
+        var user2 = new User { Id = Guid.NewGuid(), Email = "user2@example.com" };
+
+        var token1 = _sut.GenerateToken(user1);
+        var token2 = _sut.GenerateToken(user2);
+
+        token1.Should().NotBe(token2);
+    }
 }

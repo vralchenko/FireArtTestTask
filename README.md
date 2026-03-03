@@ -52,10 +52,23 @@ The API starts at `http://localhost:5000`. Swagger UI is available at `http://lo
 ### 4. Run tests
 
 ```bash
+# All tests (unit + integration)
 dotnet test
+
+# Unit tests only
+dotnet test --filter "FullyQualifiedName~Unit"
+
+# Integration tests only
+dotnet test --filter "FullyQualifiedName~Integration"
+
+# Specific test class
+dotnet test --filter "FullyQualifiedName~AuthHandlerTests"
+
+# Verbose output
+dotnet test --verbosity normal
 ```
 
-All tests run against an InMemory database — no PostgreSQL required.
+All 179 tests run against an InMemory database — no PostgreSQL required.
 
 ## API Endpoints
 
@@ -145,4 +158,4 @@ Import `FireArtTestTask.postman_collection.json` into Postman. Run requests in o
 - **Search**: The `GET /api/products` endpoint supports full-text search (by name/description), category filtering, price range filtering, sorting, and pagination.
 - **Error handling**: A global `ExceptionHandlingMiddleware` maps custom exceptions (`NotFoundException`, `ConflictException`, `UnauthorizedException`) to proper HTTP status codes.
 - **Security**: The forgot-password endpoint always returns 200 regardless of whether the email exists, to prevent user enumeration.
-- **Tests**: 64 tests (unit + integration) run against InMemory EF Core — no external dependencies needed.
+- **Tests**: 179 tests (unit + integration) run against InMemory EF Core — no external dependencies needed. Covers edge cases, boundary values, token validation, pagination, sorting, search, and full CRUD lifecycle.
